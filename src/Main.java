@@ -1,98 +1,90 @@
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.*;
 
 public class Main {
 
-    public static int[] intArray(int count) {
-        long startTime = System.nanoTime();
-        System.out.println("Start create array");
+    public static long[] newLongArray(int count) {
 
-        int[] result = new int[count];
+        long[] result = new long[count];
         for (int i = 0; i < result.length; i++) {
             result[i] = (int) (Math.random() * Integer.MAX_VALUE);
         }
 
-        long endTime = (System.nanoTime() - startTime) / 1000_000;
-        System.out.println("End create array " + endTime + "ms");
         return result;
     }
 
-    public static int[] intArrayMulti(int count) throws InterruptedException, ExecutionException {
-        int[] result = new int[10];
+    public static long[] longArrayMulti(int count) throws InterruptedException, ExecutionException {
 
-        List<Callable<int[]>> callableArrayList = new ArrayList<>();
-        long startTime = System.nanoTime();
-        System.out.println("Start create array");
+        long[] result = new long[count];
+        List<Callable<Boolean>> callableArrayList = new ArrayList<>();
         int forCore = count / Pool.cores;
 
         for (int i = 0; i < Pool.cores; i++) {
+            int finalI = i;
             if (i == Pool.cores - 1) {
+                int start = forCore * i;
                 callableArrayList.add(() -> {
-                    int maxArr = forCore + (count - forCore * Pool.cores);
-                    int[] res = new int[maxArr];
-                    for (int k = 0; k < maxArr; k++) {
-                        res[k] = (int) (Math.random() * Integer.MAX_VALUE);
+                    for (int k = start; k <= count; k++) {
+                        result[k] = (int) (Math.random() * Integer.MAX_VALUE);
                     }
-                    return res;
+                    System.out.println("i: " + finalI + ", start: " + start + ", end: " + count + ", thread: " + Thread.currentThread().getName());
+                    return true;
                 });
             } else {
+                int start = (i == 0) ? 0 : forCore * i;
+                int end = (i == 0) ? forCore : forCore * (i + 1);
                 callableArrayList.add(() -> {
-                    int[] res = new int[forCore];
-                    for (int n = 0; n < forCore; n++) {
-                        res[n] = (int) (Math.random() * Integer.MAX_VALUE);
+                    for (int n = start; n < end; n++) {
+                        result[n] = (int) (Math.random() * Integer.MAX_VALUE);
                     }
-                    return res;
+                    System.out.println("i: " + finalI + ", start: " + start + ", end: " + result[(forCore * finalI) - 1] + ", thread: " + Thread.currentThread().getName());
+                    return true;
                 });
             }
         }
-        List<Future<int[]>> futureResult = Pool.pool.invokeAll(callableArrayList);
-
-        for (Future<int[]> fb : futureResult) {
-            System.out.println(fb.get().length + ", 0: " + Arrays.stream(fb.get()).filter(a -> a == 0).sum());
+        List<Future<Boolean>> futureResult = Pool.pool.invokeAll(callableArrayList);
+        for (Future<Boolean> fb : futureResult) {
+            System.out.println(fb.get());
         }
-        long endTime = (System.nanoTime() - startTime) / 1000_000;
-        System.out.println("End create array " + endTime + "ms");
+
         return result;
     }
 
-    public static int[] initIntArray(int count) {
-        int[] result = new int[count];
-
-        long startTime = System.nanoTime();
-        System.out.println("Start create array");
+    public static long[] newIntArrayParallel(int count) {
+        long[] result = new long[count];
 
         Arrays.parallelSetAll(
                 result, i -> (int) (Math.random() * Integer.MAX_VALUE)
         );
 
-        long endTime = (System.nanoTime() - startTime) / 1000_000;
-        System.out.println("End create array " + endTime + "ms");
-
         return result;
     }
 
     public static void main(String[] args) throws InterruptedException, ExecutionException {
-        int[] solo = intArray(299_999_999);
-        System.out.println("0: " + Arrays.stream(solo).filter(a -> a == 0).count());
-        solo = null;
+        /*MyTimer.start();
+        newLongArray(499_999_999);
+        MyTimer.end();*/
 
-        int[] lam = initIntArray(299_999_999);
-        System.out.println("0: " + Arrays.stream(lam).filter(a -> a == 0).count());
-        lam = null;
-        //pool.shutdown();
+        MyTimer.start();
+        long[] multiArray = longArrayMulti(499_999_999);
+        System.out.println(Arrays.stream(multiArray).filter(x -> x == 0).count());
+        System.out.println("test: " + multiArray[4583]);
+        MyTimer.end();
 
+        MyTimer.start();
+        //newIntArrayParallel(299_999_999);
+        MyTimer.end();
 
-        /*long[] intArray = intArray(999_999_999);
-        long sumArray = 0;
+        /*long sumArray = 0;
 
         long startTime = System.nanoTime();
         System.out.println("Start");
         sumArray = Arrays.stream(intArray).sum();
         long endTime = (System.nanoTime() - startTime) / 1000_000;
         System.out.println("sum: " + sumArray + ", end time: " + endTime + "ms");*/
+
+        Pool.pool.shutdown();
     }
 }
