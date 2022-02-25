@@ -23,26 +23,18 @@ public class Main {
 
         for (int i = 0; i < Pool.cores; i++) {
             int finalI = i;
-            if (i == Pool.cores - 1) {
-                int start = forCore * i;
-                callableArrayList.add(() -> {
-                    for (int k = start; k <= count; k++) {
-                        result[k] = (int) (Math.random() * Integer.MAX_VALUE);
-                    }
-                    System.out.println("i: " + finalI + ", start: " + start + ", end: " + count + ", thread: " + Thread.currentThread().getName());
-                    return true;
-                });
-            } else {
-                int start = (i == 0) ? 0 : forCore * i;
-                int end = (i == 0) ? forCore : forCore * (i + 1);
-                callableArrayList.add(() -> {
-                    for (int n = start; n < end; n++) {
-                        result[n] = (int) (Math.random() * Integer.MAX_VALUE);
-                    }
-                    System.out.println("i: " + finalI + ", start: " + start + ", end: " + result[(forCore * finalI) - 1] + ", thread: " + Thread.currentThread().getName());
-                    return true;
-                });
-            }
+            int start = (i == 0) ? 0 : forCore * i;
+            int end = (i == 0) ? forCore : forCore * (i + 1);
+                end = (i == Pool.cores - 1) ? count : end;
+            int finalEnd = end;
+
+            callableArrayList.add(() -> {
+                for (int n = start; n < finalEnd; n++) {
+                    result[n] = (int) (Math.random() * Integer.MAX_VALUE);
+                }
+                System.out.println("i: " + finalI + ", start: " + start + ", thread: " + Thread.currentThread().getName());
+                return true;
+            });
         }
         List<Future<Boolean>> futureResult = Pool.pool.invokeAll(callableArrayList);
         for (Future<Boolean> fb : futureResult) {
