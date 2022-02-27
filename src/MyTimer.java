@@ -6,9 +6,6 @@ public class MyTimer {
     }
 
     public static void end() {
-        long end = (System.nanoTime() - start) / 1000_000;
-        System.out.println("finished: " + end + "ms");
+        System.out.println("finished: " + (System.nanoTime() - start) / 1000_000 + "ms");
     }
-
-
 }

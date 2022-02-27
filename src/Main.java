@@ -1,82 +1,34 @@
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.*;
 
 public class Main {
 
-    public static long[] newLongArray(int count) {
+    public static int[] newIntArray(int count) {
 
-        long[] result = new long[count];
+        int[] result = new int[count];
         for (int i = 0; i < result.length; i++) {
             result[i] = (int) (Math.random() * Integer.MAX_VALUE);
         }
-
         return result;
     }
 
-    public static long[] longArrayMulti(int count) throws InterruptedException, ExecutionException {
-
-        long[] result = new long[count];
-        List<Callable<Boolean>> callableArrayList = new ArrayList<>();
-        int forCore = count / Pool.cores;
-
-        for (int i = 0; i < Pool.cores; i++) {
-            int finalI = i;
-            int start = (i == 0) ? 0 : forCore * i;
-            int end = (i == 0) ? forCore : forCore * (i + 1);
-                end = (i == Pool.cores - 1) ? count : end;
-            int finalEnd = end;
-
-            callableArrayList.add(() -> {
-                for (int n = start; n < finalEnd; n++) {
-                    result[n] = (int) (Math.random() * Integer.MAX_VALUE);
-                }
-                System.out.println("i: " + finalI + ", start: " + start + ", thread: " + Thread.currentThread().getName());
-                return true;
-            });
-        }
-        List<Future<Boolean>> futureResult = Pool.pool.invokeAll(callableArrayList);
-        for (Future<Boolean> fb : futureResult) {
-            System.out.println(fb.get());
-        }
-
-        return result;
-    }
-
-    public static long[] newIntArrayParallel(int count) {
-        long[] result = new long[count];
-
-        Arrays.parallelSetAll(
-                result, i -> (int) (Math.random() * Integer.MAX_VALUE)
-        );
-
-        return result;
-    }
-
-    public static void main(String[] args) throws InterruptedException, ExecutionException {
-        /*MyTimer.start();
-        newLongArray(499_999_999);
-        MyTimer.end();*/
+    public static void main(String[] args) {
 
         MyTimer.start();
-        long[] multiArray = longArrayMulti(499_999_999);
-        System.out.println(Arrays.stream(multiArray).filter(x -> x == 0).count());
-        System.out.println("test: " + multiArray[4583]);
+        System.out.println("Create array");
+        int[] intArray = newIntArray(999_999_999);
         MyTimer.end();
 
         MyTimer.start();
-        //newIntArrayParallel(299_999_999);
+        ForkJoinPool fp = ForkJoinPool.commonPool();
+        System.out.println("ForkJoinPool sum: " + fp.invoke(new RecursiveTaskForArray(0, intArray.length, intArray, 10)));
         MyTimer.end();
 
-        /*long sumArray = 0;
-
-        long startTime = System.nanoTime();
-        System.out.println("Start");
-        sumArray = Arrays.stream(intArray).sum();
-        long endTime = (System.nanoTime() - startTime) / 1000_000;
-        System.out.println("sum: " + sumArray + ", end time: " + endTime + "ms");*/
-
-        Pool.pool.shutdown();
+        MyTimer.start();
+        long summ = 0;
+        for (int value : intArray) {
+            summ += value;
+        }
+        System.out.println("One Thread summ: " + summ);
+        MyTimer.end();
     }
 }
